@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mercado</title>
+
+<!-- Faz o app abrir em tela cheia quando adicionado à tela inicial -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0E7A4B">
+
+<!-- Ícone do atalho na tela inicial (gerado em SVG, sem depender de internet) -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjMEU3QTRCIi8+PHRleHQgeD0iOTYiIHk9IjEyNSIgZm9udC1zaXplPSI5MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0ZGRkZGRiIgZm9udC1mYW1pbHk9ImFyaWFsIj7wn5uSPC90ZXh0Pjwvc3ZnPg==">
+
+<style>
+  :root {
+    --bg: #F3F6F4;
+    --surface: #FFFFFF;
+    --primary: #1B9C63;
+    --primary-dark: #0E7A4B;
+    --primary-light: #E4F5EC;
+    --accent: #FF7A59;
+    --ink: #16211C;
+    --ink-soft: #7C8A82;
+    --border: #E7ECE9;
+    --shadow: 0 8px 24px rgba(22, 33, 28, 0.08);
+    --radius: 18px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--ink);
+  }
+
+  body {
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 440px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 92px;
+    position: relative;
+  }
+
+  .header { padding: max(28px, env(safe-area-inset-top)) 20px 18px; }
+  .header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.3px;
+  }
+  .header p { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
+
+  .summary-card {
+    margin: 0 20px 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 12px 28px rgba(15, 122, 75, 0.28);
+    position: relative;
+    overflow: hidden;
+  }
+  .summary-card::after {
+    content: "";
+    position: absolute;
+    right: -30px;
+    top: -30px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .summary-stat { position: relative; z-index: 1; }
+  .summary-stat .num { font-size: 26px; font-weight: 700; line-height: 1.1; }
+  .summary-stat .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; margin-top: 2px; }
+  .summary-divider { width: 1px; align-self: stretch; background: rgba(255,255,255,0.25); margin: 0 18px; position: relative; z-index: 1; }
+
+  .content { flex: 1; padding: 0 20px; }
+
+  .panel { display: none; animation: fadeIn .25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .section-title { font-size: 15px; font-weight: 600; margin: 4px 0 12px; }
+
+  .quick-add { display: flex; gap: 8px; margin-bottom: 16px; }
+  .quick-add input {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 13px 16px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .quick-add input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .icon-btn {
+    width: 46px; height: 46px; flex-shrink: 0;
+    border: none; border-radius: 14px;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform .12s ease, filter .12s ease;
+  }
+  .icon-btn:hover { filter: brightness(1.06); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+
+  .reminder-item { background: var(--surface); border-radius: 16px; padding: 14px 14px; margin-bottom: 10px; box-shadow: var(--shadow); }
+  .reminder-row { display: flex; align-items: center; gap: 12px; }
+  .check-circle {
+    width: 24px; height: 24px; border-radius: 50%;
+    border: 2px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; cursor: pointer; color: transparent;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .check-circle:hover { border-color: var(--primary); }
+  .check-circle.checked { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .reminder-name { flex: 1; font-size: 14.5px; font-weight: 500; }
+  .remove-x { background: none; border: none; color: var(--ink-soft); cursor: pointer; padding: 4px; display: flex; }
+  .remove-x:hover { color: var(--accent); }
+
+  .inline-confirm { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); display: none; }
+  .inline-confirm.open { display: block; }
+  .inline-confirm .row { display: grid; grid-template-columns: 70px 1fr; gap: 8px; margin-bottom: 10px; }
+  .inline-confirm label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  .inline-confirm input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 9px 10px; font-size: 13.5px; }
+  .inline-confirm input:focus-visible { outline: none; border-color: var(--primary); }
+  .confirm-actions { display: flex; gap: 8px; }
+  .confirm-btn, .cancel-btn { flex: 1; border: none; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .confirm-btn { background: var(--primary); color: #fff; }
+  .confirm-btn:hover { filter: brightness(1.05); }
+  .cancel-btn { background: var(--bg); color: var(--ink-soft); }
+  .cancel-btn:hover { background: var(--border); }
+
+  .add-form { background: var(--surface); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 18px; }
+  .add-form .field { margin-bottom: 12px; }
+  .add-form label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .add-form input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 14px; color: var(--ink); }
+  .add-form input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .two-col { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+  .submit-btn {
+    width: 100%; margin-top: 4px;
+    background: var(--primary); color: #fff; border: none; border-radius: 12px;
+    padding: 13px; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: filter .12s ease, transform .12s ease;
+  }
+  .submit-btn:hover { filter: brightness(1.05); }
+  .submit-btn:active { transform: scale(0.98); }
+
+  .purchase-item {
+    background: var(--surface); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
+    box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+  }
+  .purchase-item .name { flex: 1; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .purchase-item .qty { font-size: 12px; color: var(--ink-soft); }
+  .purchase-item .price { font-weight: 700; font-size: 14px; color: var(--primary-dark); min-width: 76px; text-align: right; }
+  .purchase-item .del { background: none; border: none; color: var(--ink-soft); cursor: pointer; display: flex; padding: 2px; }
+  .purchase-item .del:hover { color: var(--accent); }
+
+  .grand-total-card {
+    background: var(--ink); color: #fff; border-radius: var(--radius);
+    padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px;
+  }
+  .grand-total-card .lbl { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.75; }
+  .grand-total-card .val { font-size: 26px; font-weight: 700; color: #6FE3A8; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--ink-soft); }
+  .empty-state svg { margin-bottom: 10px; opacity: 0.5; }
+  .empty-state p { margin: 0; font-size: 13.5px; line-height: 1.6; }
+
+  .bottom-nav {
+    position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    width: calc(100% - 40px); max-width: 400px;
+    background: var(--surface); border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(22,33,28,0.16);
+    display: flex; padding: 8px; gap: 4px;
+  }
+  .nav-btn {
+    flex: 1; background: none; border: none;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 9px 4px; border-radius: 14px; color: var(--ink-soft);
+    cursor: pointer; font-size: 10.5px; font-weight: 600;
+    transition: background .15s ease, color .15s ease;
+  }
+  .nav-btn.active { background: var(--primary-light); color: var(--primary-dark); }
+  .nav-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .nav-badge {
+    position: absolute; top: 2px; right: 18%;
+    background: var(--accent); color: #fff; font-size: 9px; font-weight: 700;
+    min-width: 15px; height: 15px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; padding: 0 3px;
+  }
+  .nav-icon-wrap { position: relative; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <h1>Mercado</h1>
+    <p id="headerSub">Organize sua compra do início ao fim</p>
+  </div>
+
+  <div class="summary-card">
+    <div class="summary-stat">
+      <div class="num" id="summaryToBuy">0</div>
+      <div class="lbl">A comprar</div>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-stat">
+      <div class="num" id="summaryTotal">R$ 0,00</div>
+      <div class="lbl">Gasto até agora</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="panel active" id="panelList">
+      <div class="quick-add">
+        <input type="text" id="reminderInput" placeholder="O que você precisa comprar?" autocomplete="off">
+        <button class="icon-btn" id="reminderAddBtn" aria-label="Adicionar à lista">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div id="reminderListView"></div>
+    </div>
+
+    <div class="panel" id="panelBuy">
+      <div class="add-form">
+        <form id="addForm">
+          <div class="field">
+            <label for="itemName">Item</label>
+            <input id="itemName" type="text" placeholder="Ex: Arroz 5kg" autocomplete="off" required>
+          </div>
+          <div class="field two-col">
+            <div>
+              <label for="itemQty">Qtd</label>
+              <input id="itemQty" type="number" min="1" step="1" value="1" inputmode="numeric">
+            </div>
+            <div>
+              <label for="itemPrice">Preço unit. (R$)</label>
+              <input id="itemPrice" type="number" min="0" step="0.01" placeholder="0,00" inputmode="decimal" required>
+            </div>
+          </div>
+          <button type="submit" class="submit-btn">Adicionar à compra</button>
+        </form>
+      </div>
+      <div class="section-title">Itens registrados</div>
+      <div id="purchaseListViewShort"></div>
+    </div>
+
+    <div class="panel" id="panelTotal">
+      <div class="section-title">Resumo da compra</div>
+      <div id="purchaseListView"></div>
+      <div class="grand-total-card">
+        <span class="lbl">Total</span>
+        <span class="val" id="grandTotalValue">R$ 0,00</span>
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="list" id="navList">
+      <span class="nav-icon-wrap">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m4 6 1 1 2-2"/><path d="m4 12 1 1 2-2"/><path d="m4 18 1 1 2-2"/></svg>
+        <span class="nav-badge" id="listBadge" style="display:none;">0</span>
+      </span>
+      Lista
+    </button>
+    <button class="nav-btn" data-tab="buy" id="navBuy">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>
+      Comprando
+    </button>
+    <button class="nav-btn" data-tab="total" id="navTotal">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+      Total
+    </button>
+  </nav>
+
+</div>
+
+<script>
+const LIST_KEY = 'mercado-shopping-list';
+const PURCHASE_KEY = 'mercado-purchase-items';
+
+let shoppingList = [];
+let purchaseItems = [];
+let openConfirmId = null;
+
+function formatBRL(v) {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function loadAll() {
+  try {
+    const raw = localStorage.getItem(LIST_KEY);
+    shoppingList = raw ? JSON.parse(raw) : [];
+  } catch (e) { shoppingList = []; }
+  try {
+    const raw = localStorage.getItem(PURCHASE_KEY);
+    purchaseItems = raw ? JSON.parse(raw) : [];
+  } catch (e) { purchaseItems = []; }
+  renderAll();
+}
+
+function saveList() {
+  try { localStorage.setItem(LIST_KEY, JSON.stringify(shoppingList)); } catch (e) {}
+}
+function savePurchases() {
+  try { localStorage.setItem(PURCHASE_KEY, JSON.stringify(purchaseItems)); } catch (e) {}
+}
+
+function renderAll() {
+  renderSummary();
+  renderReminderList();
+  renderPurchaseList();
+}
+
+function renderSummary() {
+  document.getElementById('summaryToBuy').textContent = shoppingList.length;
+  const total = purchaseItems.reduce((s, it) => s + it.price * it.qty, 0);
+  document.getElementById('summaryTotal').textContent = formatBRL(total);
+  const badge = document.getElementById('listBadge');
+  if (shoppingList.length > 0) {
+    badge.style.display = 'flex';
+    badge.textContent = shoppingList.length;
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderReminderList() {
+  const el = document.getElementById('reminderListView');
+  if (shoppingList.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m4 6 1 1 2-2"/><path d="m4 12 1 1 2-2"/><path d="m4 18 1 1 2-2"/></svg>
+        <p>Sua lista está vazia.<br>Adicione itens que você precisa comprar.</p>
+      </div>`;
+    return;
+  }
+  el.innerHTML = shoppingList.map(it => `
+    <div class="reminder-item" data-item-id="${it.id}">
+      <div class="reminder-row">
+        <button class="check-circle ${openConfirmId === it.id ? 'checked' : ''}" data-id="${it.id}" aria-label="Marcar como comprado">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+        <span class="reminder-name">${escapeHtml(it.name)}</span>
+        <button class="remove-x" data-id="${it.id}" aria-label="Remover ${escapeHtml(it.name)}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="inline-confirm ${openConfirmId === it.id ? 'open' : ''}">
+        <div class="row">
+          <div>
+            <label>Qtd</label>
+            <input type="number" class="confirm-qty" min="1" step="1" value="1" inputmode="numeric">
+          </div>
+          <div>
+            <label>Preço unit. (R$)</label>
+            <input type="number" class="confirm-price" min="0" step="0.01" placeholder="0,00" inputmode="decimal">
+          </div>
+        </div>
+        <div class="confirm-actions">
+          <button class="cancel-btn" data-id="${it.id}" data-action="cancel">Cancelar</button>
+          <button class="confirm-btn" data-id="${it.id}" data-action="confirm">Confirmar compra</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.check-circle').forEach(btn => {
+    btn.addEventListener('click', () => toggleConfirm(btn.dataset.id));
+  });
+  el.querySelectorAll('.remove-x').forEach(btn => {
+    btn.addEventListener('click', () => removeReminder(btn.dataset.id));
+  });
+  el.querySelectorAll('[data-action="cancel"]').forEach(btn => {
+    btn.addEventListener('click', () => { openConfirmId = null; renderReminderList(); });
+  });
+  el.querySelectorAll('[data-action="confirm"]').forEach(btn => {
+    btn.addEventListener('click', () => confirmPurchaseFromReminder(btn.dataset.id));
+  });
+}
+
+function toggleConfirm(id) {
+  openConfirmId = openConfirmId === id ? null : id;
+  renderReminderList();
+}
+
+function removeReminder(id) {
+  shoppingList = shoppingList.filter(it => String(it.id) !== String(id));
+  if (openConfirmId === id) openConfirmId = null;
+  renderAll();
+  saveList();
+}
+
+function confirmPurchaseFromReminder(id) {
+  const card = document.querySelector(`.reminder-item[data-item-id="${id}"]`);
+  const qty = Math.max(1, parseInt(card.querySelector('.confirm-qty').value, 10) || 1);
+  const price = parseFloat(card.querySelector('.confirm-price').value);
+  if (isNaN(price) || price < 0) {
+    card.querySelector('.confirm-price').focus();
+    return;
+  }
+  const item = shoppingList.find(it => String(it.id) === String(id));
+  purchaseItems.push({ id: Date.now().toString(), name: item.name, qty, price });
+  shoppingList = shoppingList.filter(it => String(it.id) !== String(id));
+  openConfirmId = null;
+  renderAll();
+  saveList();
+  savePurchases();
+}
+
+document.getElementById('reminderAddBtn').addEventListener('click', addReminder);
+document.getElementById('reminderInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); addReminder(); }
+});
+function addReminder() {
+  const input = document.getElementById('reminderInput');
+  const name = input.value.trim();
+  if (!name) return;
+  shoppingList.push({ id: Date.now().toString(), name });
+  input.value = '';
+  input.focus();
+  renderAll();
+  saveList();
+}
+
+function renderPurchaseList() {
+  const full = document.getElementById('purchaseListView');
+  const short = document.getElementById('purchaseListViewShort');
+  const grandTotalEl = document.getElementById('grandTotalValue');
+
+  if (purchaseItems.length === 0) {
+    full.innerHTML = `
+      <div class="empty-state">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>
+        <p>Nenhum item registrado ainda.</p>
+      </div>`;
+    short.innerHTML = `<div class="empty-state"><p>Os itens que você adicionar aqui aparecem nesta lista.</p></div>`;
+    grandTotalEl.textContent = formatBRL(0);
+    return;
+  }
+
+  const rowsHtml = purchaseItems.map(it => `
+    <div class="purchase-item">
+      <span class="name">${escapeHtml(it.name)}</span>
+      <span class="qty">${it.qty > 1 ? it.qty + '× ' + formatBRL(it.price) : ''}</span>
+      <span class="price">${formatBRL(it.price * it.qty)}</span>
+      <button class="del" data-id="${it.id}" aria-label="Remover ${escapeHtml(it.name)}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  `).join('');
+
+  full.innerHTML = rowsHtml;
+  short.innerHTML = rowsHtml;
+
+  [full, short].forEach(container => {
+    container.querySelectorAll('.del').forEach(btn => {
+      btn.addEventListener('click', () => removePurchase(btn.dataset.id));
+    });
+  });
+
+  const total = purchaseItems.reduce((s, it) => s + it.price * it.qty, 0);
+  grandTotalEl.textContent = formatBRL(total);
+}
+
+function removePurchase(id) {
+  purchaseItems = purchaseItems.filter(it => String(it.id) !== String(id));
+  renderAll();
+  savePurchases();
+}
+
+document.getElementById('addForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const nameInput = document.getElementById('itemName');
+  const qtyInput = document.getElementById('itemQty');
+  const priceInput = document.getElementById('itemPrice');
+
+  const name = nameInput.value.trim();
+  const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+  const price = parseFloat(priceInput.value);
+  if (!name || isNaN(price) || price < 0) return;
+
+  purchaseItems.push({ id: Date.now().toString(), name, qty, price });
+  nameInput.value = '';
+  qtyInput.value = '1';
+  priceInput.value = '';
+  nameInput.focus();
+
+  renderAll();
+  savePurchases();
+});
+
+const navButtons = {
+  list: document.getElementById('navList'),
+  buy: document.getElementById('navBuy'),
+  total: document.getElementById('navTotal'),
+};
+const panels = {
+  list: document.getElementById('panelList'),
+  buy: document.getElementById('panelBuy'),
+  total: document.getElementById('panelTotal'),
+};
+const subtitles = {
+  list: 'Organize sua compra do início ao fim',
+  buy: 'Registre os itens conforme coloca no carrinho',
+  total: 'Acompanhe quanto você já vai gastar',
+};
+
+function switchTab(tab) {
+  Object.keys(navButtons).forEach(k => {
+    navButtons[k].classList.toggle('active', k === tab);
+    panels[k].classList.toggle('active', k === tab);
+  });
+  document.getElementById('headerSub').textContent = subtitles[tab];
+}
+
+Object.keys(navButtons).forEach(k => {
+  navButtons[k].addEventListener('click', () => switchTab(k));
+});
+
+loadAll();
+</script>
+
+</body>
+</html>
