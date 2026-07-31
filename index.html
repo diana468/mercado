@@ -164,11 +164,26 @@
   }
   .check-circle:hover { border-color: var(--primary); }
   .check-circle.checked { background: var(--primary); border-color: var(--primary); color: #fff; }
-  .reminder-name-wrap { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; }
+  .reminder-name-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+  .reminder-name-col { display: flex; flex-direction: column; min-width: 0; flex: 1; }
   .reminder-name { font-size: 14.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .reminder-name.bought { color: var(--ink-faint); text-decoration: line-through; font-weight: 500; }
+  .reminder-brand { font-size: 11.5px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+  .reminder-brand.bought { color: var(--ink-faint); }
   .reminder-qty { font-size: 12px; color: var(--ink-soft); flex-shrink: 0; }
   .reminder-qty.bought { color: var(--ink-faint); }
+  .brand-row { margin-bottom: 10px; }
+  .brand-row input {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 11px 16px;
+    color: var(--ink);
+    font-size: 13.5px;
+  }
+  .brand-row input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .inline-confirm .field-full { margin-bottom: 10px; }
   .reminder-price { font-size: 13px; font-weight: 700; color: var(--primary-dark); flex-shrink: 0; margin-left: auto; margin-right: 4px; }
   .remove-x { background: none; border: none; color: var(--ink-faint); cursor: pointer; padding: 4px; display: flex; }
   .remove-x:hover { color: var(--accent); }
@@ -205,7 +220,9 @@
     background: var(--surface); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px;
     box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
   }
-  .purchase-item .name { flex: 1; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .purchase-item .name-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .purchase-item .name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .purchase-item .item-brand { font-size: 11px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
   .purchase-item .qty { font-size: 12px; color: var(--ink-soft); }
   .purchase-item .price { font-weight: 700; font-size: 14px; color: var(--primary-dark); min-width: 76px; text-align: right; }
   .purchase-item .del { background: none; border: none; color: var(--ink-faint); cursor: pointer; display: flex; padding: 2px; }
@@ -280,9 +297,11 @@
   .history-chevron.open { transform: rotate(180deg); }
   .history-items { max-height: 0; overflow: hidden; transition: max-height .25s ease; }
   .history-items.open { max-height: 1200px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
-  .history-line { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; }
+  .history-line { display: flex; justify-content: space-between; align-items: flex-start; font-size: 13px; padding: 5px 0; }
+  .history-line .n-col { display: flex; flex-direction: column; min-width: 0; }
   .history-line .n { color: var(--ink); }
-  .history-line .p { color: var(--ink-soft); font-weight: 600; }
+  .history-line .n-brand { color: var(--ink-soft); font-size: 11px; margin-top: 1px; }
+  .history-line .p { color: var(--ink-soft); font-weight: 600; flex-shrink: 0; margin-left: 10px; }
   .history-del { margin-top: 12px; width: 100%; background: none; border: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; padding: 6px; }
 
   /* Stats */
@@ -362,6 +381,9 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
+      <div class="brand-row">
+        <input type="text" id="reminderBrand" placeholder="Marca (opcional)" autocomplete="off">
+      </div>
       <div class="search-row">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="text" id="searchInput" placeholder="Buscar na lista..." autocomplete="off">
@@ -381,6 +403,10 @@
           <div class="field">
             <label for="itemName">Item</label>
             <input id="itemName" type="text" placeholder="Ex: Arroz 5kg" autocomplete="off" required>
+          </div>
+          <div class="field">
+            <label for="itemBrand">Marca (opcional)</label>
+            <input id="itemBrand" type="text" placeholder="Ex: Tio João" autocomplete="off">
           </div>
           <div class="field two-col">
             <div>
@@ -511,7 +537,14 @@ function loadAll() {
   try { shoppingList = JSON.parse(localStorage.getItem(LIST_KEY) || '[]'); } catch (e) { shoppingList = []; }
   try { purchaseItems = JSON.parse(localStorage.getItem(PURCHASE_KEY) || '[]'); } catch (e) { purchaseItems = []; }
   try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+  normalizeBrands();
   renderAll();
+}
+function normalizeBrands() {
+  // Compatibilidade: registros antigos não possuem "brand" — garante brand: "" sem quebrar nada
+  shoppingList.forEach(it => { if (typeof it.brand !== 'string') it.brand = ''; });
+  purchaseItems.forEach(it => { if (typeof it.brand !== 'string') it.brand = ''; });
+  history.forEach(rec => { (rec.items || []).forEach(it => { if (typeof it.brand !== 'string') it.brand = ''; }); });
 }
 function saveList() { try { localStorage.setItem(LIST_KEY, JSON.stringify(shoppingList)); } catch (e) {} }
 function savePurchases() { try { localStorage.setItem(PURCHASE_KEY, JSON.stringify(purchaseItems)); } catch (e) {} }
@@ -534,8 +567,8 @@ function combinedCount() {
   return shoppingList.filter(it => it.bought).length + purchaseItems.length;
 }
 function combinedItems() {
-  const a = shoppingList.filter(it => it.bought).map(it => ({ name: it.name, qty: it.qty, price: it.price }));
-  const b = purchaseItems.map(it => ({ name: it.name, qty: it.qty, price: it.price }));
+  const a = shoppingList.filter(it => it.bought).map(it => ({ name: it.name, brand: it.brand || '', qty: it.qty, price: it.price }));
+  const b = purchaseItems.map(it => ({ name: it.name, brand: it.brand || '', qty: it.qty, price: it.price }));
   return a.concat(b);
 }
 
@@ -556,7 +589,10 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 
 function renderReminderList() {
   const el = document.getElementById('reminderListView');
-  const filtered = shoppingList.filter(it => it.name.toLowerCase().includes(searchQuery));
+  const filtered = shoppingList.filter(it =>
+    it.name.toLowerCase().includes(searchQuery) ||
+    (it.brand && it.brand.toLowerCase().includes(searchQuery))
+  );
 
   if (shoppingList.length === 0) {
     el.innerHTML = `
@@ -578,7 +614,10 @@ function renderReminderList() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
         </button>
         <div class="reminder-name-wrap">
-          <span class="reminder-name ${it.bought ? 'bought' : ''}">${escapeHtml(it.name)}</span>
+          <div class="reminder-name-col">
+            <span class="reminder-name ${it.bought ? 'bought' : ''}">${escapeHtml(it.name)}</span>
+            ${it.brand ? `<span class="reminder-brand ${it.bought ? 'bought' : ''}">${escapeHtml(it.brand)}</span>` : ''}
+          </div>
           <span class="reminder-qty ${it.bought ? 'bought' : ''}">${it.qty > 1 ? 'x' + it.qty : ''}</span>
         </div>
         ${it.bought ? `<span class="reminder-price">${formatBRL(it.price * it.qty)}</span>` : ''}
@@ -587,6 +626,10 @@ function renderReminderList() {
         </button>
       </div>
       <div class="inline-confirm ${openConfirmId === it.id ? 'open' : ''}">
+        <div class="field-full">
+          <label>Marca (opcional)</label>
+          <input type="text" class="confirm-brand" value="${escapeHtml(it.brand || '')}" placeholder="Marca">
+        </div>
         <div class="row">
           <div>
             <label>Qtd</label>
@@ -637,11 +680,13 @@ function confirmPurchaseFromReminder(id) {
   const card = document.querySelector(`.reminder-item[data-item-id="${id}"]`);
   const qty = Math.max(1, parseInt(card.querySelector('.confirm-qty').value, 10) || 1);
   const price = parseFloat(card.querySelector('.confirm-price').value);
+  const brand = card.querySelector('.confirm-brand').value.trim();
   if (isNaN(price) || price < 0) { card.querySelector('.confirm-price').focus(); return; }
   const item = shoppingList.find(it => String(it.id) === String(id));
   item.bought = true;
   item.qty = qty;
   item.price = price;
+  item.brand = brand;
   openConfirmId = null;
   renderAll();
   saveList();
@@ -653,8 +698,10 @@ document.getElementById('reminderInput').addEventListener('keydown', (e) => { if
 function addReminder() {
   const input = document.getElementById('reminderInput');
   const qtyInput = document.getElementById('reminderQty');
+  const brandInput = document.getElementById('reminderBrand');
   const name = input.value.trim();
   const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
+  const brand = brandInput.value.trim();
   if (!name) return;
 
   const existing = shoppingList.find(it => it.name.trim().toLowerCase() === name.toLowerCase());
@@ -667,9 +714,10 @@ function addReminder() {
     return;
   }
 
-  shoppingList.push({ id: Date.now().toString(), name, qty, bought: false, price: null });
+  shoppingList.push({ id: Date.now().toString(), name, brand, qty, bought: false, price: null });
   input.value = '';
   qtyInput.value = '1';
+  brandInput.value = '';
   input.focus();
   renderAll();
   saveList();
@@ -680,6 +728,7 @@ document.getElementById('dupCancelBtn').addEventListener('click', () => {
   document.getElementById('dupModalOverlay').classList.remove('open');
   document.getElementById('reminderInput').value = '';
   document.getElementById('reminderQty').value = '1';
+  document.getElementById('reminderBrand').value = '';
 });
 document.getElementById('dupConfirmBtn').addEventListener('click', () => {
   if (!pendingDup) return;
@@ -689,6 +738,7 @@ document.getElementById('dupConfirmBtn').addEventListener('click', () => {
   document.getElementById('dupModalOverlay').classList.remove('open');
   document.getElementById('reminderInput').value = '';
   document.getElementById('reminderQty').value = '1';
+  document.getElementById('reminderBrand').value = '';
   renderAll();
   saveList();
 });
@@ -714,9 +764,9 @@ function showToast(msg, duration = 3400) {
 /* ---------- BACKUP: EXPORTAR / IMPORTAR / MODELO (Excel) ---------- */
 function exportListToExcel() {
   if (typeof XLSX === 'undefined') { showToast('Não foi possível carregar o módulo de Excel. Verifique sua conexão com a internet.'); return; }
-  const data = shoppingList.map(it => ({ Produto: it.name, Quantidade: it.qty }));
-  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Quantidade'] });
-  ws['!cols'] = [{ wch: 28 }, { wch: 12 }];
+  const data = shoppingList.map(it => ({ Produto: it.name, Marca: it.brand || '', Quantidade: it.qty }));
+  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Marca', 'Quantidade'] });
+  ws['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Lista');
   XLSX.writeFile(wb, 'Lista_Mercado.xlsx');
@@ -726,12 +776,12 @@ function exportListToExcel() {
 function downloadTemplateExcel() {
   if (typeof XLSX === 'undefined') { showToast('Não foi possível carregar o módulo de Excel. Verifique sua conexão com a internet.'); return; }
   const data = [
-    { Produto: 'Arroz', Quantidade: 1 },
-    { Produto: 'Feijão', Quantidade: 2 },
-    { Produto: 'Macarrão', Quantidade: 1 },
+    { Produto: 'Arroz', Marca: 'Tio João', Quantidade: 1 },
+    { Produto: 'Feijão', Marca: '', Quantidade: 2 },
+    { Produto: 'Macarrão', Marca: '', Quantidade: 1 },
   ];
-  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Quantidade'] });
-  ws['!cols'] = [{ wch: 28 }, { wch: 12 }];
+  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Marca', 'Quantidade'] });
+  ws['!cols'] = [{ wch: 28 }, { wch: 18 }, { wch: 12 }];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
   XLSX.writeFile(wb, 'Modelo_Lista_Mercado.xlsx');
@@ -754,6 +804,7 @@ async function handleImportFile(e) {
       const keys = Object.keys(row);
       const prodKey = keys.find(k => k.trim().toLowerCase() === 'produto');
       const qtyKey = keys.find(k => k.trim().toLowerCase() === 'quantidade');
+      const brandKey = keys.find(k => k.trim().toLowerCase() === 'marca');
       if (!prodKey) return;
 
       const name = String(row[prodKey] || '').trim();
@@ -762,12 +813,16 @@ async function handleImportFile(e) {
       let qty = parseInt(row[qtyKey], 10);
       if (!qty || isNaN(qty) || qty <= 0) qty = 1; // vazio ou não-numérico -> 1
 
+      // Coluna Marca é opcional: se não existir na planilha, brand fica ""
+      const brand = brandKey ? String(row[brandKey] || '').trim() : '';
+
       const existing = shoppingList.find(it => it.name.trim().toLowerCase() === name.toLowerCase());
       if (existing) {
         existing.qty += qty;
+        if (brand && !existing.brand) existing.brand = brand;
         updated++;
       } else {
-        shoppingList.push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, qty, bought: false, price: null });
+        shoppingList.push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, brand, qty, bought: false, price: null });
         added++;
       }
     });
@@ -804,7 +859,10 @@ function renderPurchaseList() {
   } else {
     full.innerHTML = items.map(it => `
       <div class="purchase-item">
-        <span class="name">${escapeHtml(it.name)}</span>
+        <div class="name-col">
+          <span class="name">${escapeHtml(it.name)}</span>
+          ${it.brand ? `<span class="item-brand">${escapeHtml(it.brand)}</span>` : ''}
+        </div>
         <span class="qty">${it.qty > 1 ? it.qty + '× ' + formatBRL(it.price) : ''}</span>
         <span class="price">${formatBRL(it.price * it.qty)}</span>
       </div>
@@ -818,7 +876,10 @@ function renderPurchaseList() {
   } else {
     short.innerHTML = purchaseItems.map(it => `
       <div class="purchase-item">
-        <span class="name">${escapeHtml(it.name)}</span>
+        <div class="name-col">
+          <span class="name">${escapeHtml(it.name)}</span>
+          ${it.brand ? `<span class="item-brand">${escapeHtml(it.brand)}</span>` : ''}
+        </div>
         <span class="qty">${it.qty > 1 ? it.qty + '× ' + formatBRL(it.price) : ''}</span>
         <span class="price">${formatBRL(it.price * it.qty)}</span>
         <button class="del" data-id="${it.id}" aria-label="Remover ${escapeHtml(it.name)}">
@@ -839,15 +900,17 @@ function removePurchase(id) {
 document.getElementById('addForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const nameInput = document.getElementById('itemName');
+  const brandInput = document.getElementById('itemBrand');
   const qtyInput = document.getElementById('itemQty');
   const priceInput = document.getElementById('itemPrice');
   const name = nameInput.value.trim();
+  const brand = brandInput.value.trim();
   const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
   const price = parseFloat(priceInput.value);
   if (!name || isNaN(price) || price < 0) return;
 
-  purchaseItems.push({ id: Date.now().toString(), name, qty, price });
-  nameInput.value = ''; qtyInput.value = '1'; priceInput.value = '';
+  purchaseItems.push({ id: Date.now().toString(), name, brand, qty, price });
+  nameInput.value = ''; brandInput.value = ''; qtyInput.value = '1'; priceInput.value = '';
   nameInput.focus();
   renderAll();
   savePurchases();
@@ -964,7 +1027,10 @@ function renderHistoryList() {
         <div class="history-items ${isOpen ? 'open' : ''}">
           ${entry.items.map(it => `
             <div class="history-line">
-              <span class="n">${escapeHtml(it.name)}${it.qty > 1 ? ' (' + it.qty + 'x)' : ''}</span>
+              <div class="n-col">
+                <span class="n">${escapeHtml(it.name)}${it.qty > 1 ? ' (' + it.qty + 'x)' : ''}</span>
+                ${it.brand ? `<span class="n-brand">${escapeHtml(it.brand)}</span>` : ''}
+              </div>
               <span class="p">${formatBRL(it.price * it.qty)}</span>
             </div>
           `).join('')}
@@ -999,8 +1065,10 @@ function computeStats() {
   const map = {};
   history.forEach(rec => {
     rec.items.forEach(it => {
-      const key = it.name.trim().toLowerCase();
-      if (!map[key]) map[key] = { displayName: it.name, entries: [] };
+      const brand = (it.brand || '').trim();
+      // Produto + Marca são itens diferentes; sem marca, considera apenas o nome do produto
+      const key = it.name.trim().toLowerCase() + '||' + brand.toLowerCase();
+      if (!map[key]) map[key] = { displayName: it.name, brand, entries: [] };
       map[key].entries.push({ price: it.price, market: rec.market, dateISO: rec.dateISO });
     });
   });
@@ -1009,7 +1077,7 @@ function computeStats() {
     const max = p.entries.reduce((a, b) => (b.price > a.price ? b : a));
     const avg = p.entries.reduce((s, e) => s + e.price, 0) / p.entries.length;
     const last = p.entries.reduce((a, b) => (new Date(b.dateISO) > new Date(a.dateISO) ? b : a));
-    return { name: p.displayName, min, max, avg, last, count: p.entries.length };
+    return { name: p.displayName, brand: p.brand, min, max, avg, last, count: p.entries.length };
   }).sort((a, b) => new Date(b.last.dateISO) - new Date(a.last.dateISO));
 }
 
@@ -1026,7 +1094,7 @@ function renderStatsList() {
   }
   el.innerHTML = stats.map(s => `
     <div class="stat-card">
-      <div class="stat-name">${escapeHtml(s.name)}${s.count > 1 ? ` <span style="color:var(--ink-faint);font-weight:500;font-size:12px;">(${s.count}x)</span>` : ''}</div>
+      <div class="stat-name">${escapeHtml(s.name)}${s.brand ? ' - ' + escapeHtml(s.brand) : ''}${s.count > 1 ? ` <span style="color:var(--ink-faint);font-weight:500;font-size:12px;">(${s.count}x)</span>` : ''}</div>
       <div class="stat-grid">
         <div>
           <span class="stat-lbl">Menor preço</span>
