@@ -13,6 +13,9 @@
 
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjQwIiBmaWxsPSIjMTU4MDNEIi8+PHRleHQgeD0iOTYiIHk9IjEyNSIgZm9udC1zaXplPSI5MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI0ZGRkZGRiIgZm9udC1mYW1pbHk9ImFyaWFsIj7wn5uSPC90ZXh0Pjwvc3ZnPg==">
 
+<!-- SheetJS: leitura/escrita de arquivos Excel direto no navegador, sem backend -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
   :root {
     --bg: #F4F5F4;
@@ -126,6 +129,29 @@
     color: var(--ink);
   }
   .search-row input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+  .backup-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .backup-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 10px 4px; font-size: 11px; font-weight: 700; color: var(--ink-soft);
+    cursor: pointer; white-space: nowrap;
+  }
+  .backup-btn:hover { background: var(--bg); border-color: var(--ink-faint); }
+  .backup-btn:active { transform: scale(0.97); }
+  .backup-btn .emoji { font-size: 13px; }
+
+  .toast {
+    position: fixed; bottom: max(96px, calc(env(safe-area-inset-bottom) + 88px)); left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    background: var(--ink); color: #fff; padding: 13px 18px; border-radius: 14px;
+    font-size: 13px; font-weight: 600; line-height: 1.5; text-align: center; white-space: pre-line;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    max-width: calc(100% - 48px);
+    z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   .reminder-item { background: var(--surface); border-radius: 16px; padding: 13px 14px; margin-bottom: 9px; box-shadow: var(--shadow); }
   .reminder-row { display: flex; align-items: center; gap: 12px; }
@@ -340,6 +366,12 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input type="text" id="searchInput" placeholder="Buscar na lista..." autocomplete="off">
       </div>
+      <div class="backup-row">
+        <button class="backup-btn" id="importBtn"><span class="emoji">⬆️</span>Importar</button>
+        <button class="backup-btn" id="exportBtn"><span class="emoji">⬇️</span>Exportar</button>
+        <button class="backup-btn" id="templateBtn"><span class="emoji">📄</span>Modelo</button>
+      </div>
+      <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display:none">
       <div id="reminderListView"></div>
     </div>
 
@@ -663,6 +695,95 @@ document.getElementById('dupConfirmBtn').addEventListener('click', () => {
 document.getElementById('dupModalOverlay').addEventListener('click', (e) => {
   if (e.target.id === 'dupModalOverlay') document.getElementById('dupCancelBtn').click();
 });
+
+/* ---------- TOAST ---------- */
+function showToast(msg, duration = 3400) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+/* ---------- BACKUP: EXPORTAR / IMPORTAR / MODELO (Excel) ---------- */
+function exportListToExcel() {
+  if (typeof XLSX === 'undefined') { showToast('Não foi possível carregar o módulo de Excel. Verifique sua conexão com a internet.'); return; }
+  const data = shoppingList.map(it => ({ Produto: it.name, Quantidade: it.qty }));
+  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Quantidade'] });
+  ws['!cols'] = [{ wch: 28 }, { wch: 12 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lista');
+  XLSX.writeFile(wb, 'Lista_Mercado.xlsx');
+  showToast('Arquivo exportado com sucesso.');
+}
+
+function downloadTemplateExcel() {
+  if (typeof XLSX === 'undefined') { showToast('Não foi possível carregar o módulo de Excel. Verifique sua conexão com a internet.'); return; }
+  const data = [
+    { Produto: 'Arroz', Quantidade: 1 },
+    { Produto: 'Feijão', Quantidade: 2 },
+    { Produto: 'Macarrão', Quantidade: 1 },
+  ];
+  const ws = XLSX.utils.json_to_sheet(data, { header: ['Produto', 'Quantidade'] });
+  ws['!cols'] = [{ wch: 28 }, { wch: 12 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Modelo');
+  XLSX.writeFile(wb, 'Modelo_Lista_Mercado.xlsx');
+}
+
+async function handleImportFile(e) {
+  const file = e.target.files[0];
+  e.target.value = ''; // allow re-selecting the same file later
+  if (!file) return;
+  if (typeof XLSX === 'undefined') { showToast('Não foi possível carregar o módulo de Excel. Verifique sua conexão com a internet.'); return; }
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    let added = 0, updated = 0;
+    rows.forEach(row => {
+      const keys = Object.keys(row);
+      const prodKey = keys.find(k => k.trim().toLowerCase() === 'produto');
+      const qtyKey = keys.find(k => k.trim().toLowerCase() === 'quantidade');
+      if (!prodKey) return;
+
+      const name = String(row[prodKey] || '').trim();
+      if (!name) return; // ignora linhas sem nome
+
+      let qty = parseInt(row[qtyKey], 10);
+      if (!qty || isNaN(qty) || qty <= 0) qty = 1; // vazio ou não-numérico -> 1
+
+      const existing = shoppingList.find(it => it.name.trim().toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.qty += qty;
+        updated++;
+      } else {
+        shoppingList.push({ id: Date.now().toString() + Math.random().toString(36).slice(2, 6), name, qty, bought: false, price: null });
+        added++;
+      }
+    });
+
+    renderAll();
+    saveList();
+    showToast(`Lista importada com sucesso!\nProdutos adicionados: ${added}\nProdutos atualizados: ${updated}`);
+  } catch (err) {
+    showToast('Não foi possível ler esse arquivo. Confira se é um Excel válido (.xlsx ou .xls).');
+  }
+}
+
+document.getElementById('exportBtn').addEventListener('click', exportListToExcel);
+document.getElementById('templateBtn').addEventListener('click', downloadTemplateExcel);
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+document.getElementById('importFileInput').addEventListener('change', handleImportFile);
 
 /* ---------- COMPRANDO ---------- */
 function renderPurchaseList() {
