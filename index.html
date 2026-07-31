@@ -229,8 +229,8 @@
   .add-form { background: var(--surface); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); margin-bottom: 18px; }
   .add-form .field { margin-bottom: 12px; }
   .add-form label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
-  .add-form input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--ink); }
-  .add-form input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .add-form input, .add-form select { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--ink); -webkit-appearance: none; appearance: none; }
+  .add-form input:focus-visible, .add-form select:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
   .two-col { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
   .submit-btn {
     width: 100%; margin-top: 4px;
@@ -449,6 +449,21 @@
           <div class="field">
             <label for="itemBrand">Marca (opcional)</label>
             <input id="itemBrand" type="text" placeholder="Ex: Tio João" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="itemCategory">Categoria (opcional)</label>
+            <select id="itemCategory">
+              <option value="">Sem categoria</option>
+              <option value="Hortifruti">Hortifruti</option>
+              <option value="Carnes">Carnes</option>
+              <option value="Laticínios">Laticínios</option>
+              <option value="Padaria">Padaria</option>
+              <option value="Mercearia">Mercearia</option>
+              <option value="Bebidas">Bebidas</option>
+              <option value="Limpeza">Limpeza</option>
+              <option value="Higiene">Higiene</option>
+              <option value="Outros">Outros</option>
+            </select>
           </div>
           <div class="price-hint" id="itemPriceHint" style="display:none;"></div>
           <div class="field two-col">
@@ -1072,16 +1087,18 @@ document.getElementById('addForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const nameInput = document.getElementById('itemName');
   const brandInput = document.getElementById('itemBrand');
+  const categorySelect = document.getElementById('itemCategory');
   const qtyInput = document.getElementById('itemQty');
   const priceInput = document.getElementById('itemPrice');
   const name = nameInput.value.trim();
   const brand = brandInput.value.trim();
+  const category = categorySelect.value;
   const qty = Math.max(1, parseInt(qtyInput.value, 10) || 1);
   const price = parseFloat(priceInput.value);
   if (!name || isNaN(price) || price < 0) return;
 
-  purchaseItems.push({ id: Date.now().toString(), name, brand, category: '', qty, price });
-  nameInput.value = ''; brandInput.value = ''; qtyInput.value = '1'; priceInput.value = '';
+  purchaseItems.push({ id: Date.now().toString(), name, brand, category, qty, price });
+  nameInput.value = ''; brandInput.value = ''; categorySelect.value = ''; qtyInput.value = '1'; priceInput.value = '';
   document.getElementById('itemPriceHint').style.display = 'none';
   nameInput.focus();
   renderAll();
